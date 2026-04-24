@@ -23,6 +23,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [dbSpareparts, setDbSpareparts] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSignatureEmpty, setIsSignatureEmpty] = useState(true);
   
   const [error, setError] = useState('');
   const sigCanvas = useRef<SignatureCanvas>(null);
@@ -65,30 +66,12 @@ export default function RequestForm({ onSuccess, theme }: Props) {
     setError('');
   };
 
-  const handleSend = async () => {
-    alert('Tombol diklik! Memulai proses...');
-    console.log('handleSend started');
-    if (!sparepart) {
-      setError('Mohon pilih atau isi nama sparepart.');
-      return;
-    }
-    if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) {
-      setError('Mohon isi quantity yang valid.');
-      return;
-    }
-    if (!requester.trim()) {
-      setError('Mohon isi nama peminta.');
-      return;
-    }
-    if (!division) {
-      setError('Mohon pilih divisi.');
-      return;
-    }
-    if (sigCanvas.current?.isEmpty()) {
-      setError('Mohon berikan tanda tangan Anda.');
-      return;
-    }
+  const isFormValid = sparepart && qty && requester.trim() && division && !isSignatureEmpty;
 
+  const handleSend = async () => {
+    if (!isFormValid) return;
+    
+    console.log('handleSend started');
     const signatureStr = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || '';
     
     setError('');
@@ -105,6 +88,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
       });
       console.log('onSuccess completed successfully');
       handleReset();
+      setIsSignatureEmpty(true);
     } catch (err: any) {
       console.error('Error in handleSend:', err);
       setError('Terjadi kesalahan saat mengirim data. Silakan coba lagi.');
@@ -229,10 +213,14 @@ export default function RequestForm({ onSuccess, theme }: Props) {
                 ref={sigCanvas} 
                 penColor={theme === 'dark' ? '#f4f4f5' : 'black'}
                 canvasProps={{ className: 'w-full h-40 cursor-crosshair' }} 
+                onEnd={() => setIsSignatureEmpty(sigCanvas.current?.isEmpty() ?? true)}
               />
               <button 
                 type="button"
-                onClick={() => sigCanvas.current?.clear()}
+                onClick={() => {
+                  sigCanvas.current?.clear();
+                  setIsSignatureEmpty(true);
+                }}
                 className="absolute top-2 right-2 text-xs bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1 rounded text-slate-500 dark:text-zinc-400 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 Clear
@@ -256,8 +244,12 @@ export default function RequestForm({ onSuccess, theme }: Props) {
         <button
           type="button"
           onClick={handleSend}
-          disabled={isSubmitting}
-          className="relative z-50 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          disabled={isSubmitting || !isFormValid}
+          className={`relative z-50 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white transition-all focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed ${
+            isFormValid 
+              ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 focus:ring-blue-500' 
+              : 'bg-slate-300 dark:bg-zinc-700 text-slate-500 dark:text-zinc-500 cursor-not-allowed'
+          } ${isSubmitting ? 'opacity-70' : ''}`}
         >
           {isSubmitting ? (
             <>
@@ -266,7 +258,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
             </>
           ) : (
             <>
-              <Send className="w-5 h-5" />
+              <Send className={`w-5 h-5 ${isFormValid ? 'text-white' : 'text-slate-400'}`} />
               <span>Send Request</span>
             </>
           )}

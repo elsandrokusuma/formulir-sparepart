@@ -5,7 +5,13 @@ interface Props {
 }
 
 export default function FullHistory({ records }: Props) {
-  if (records.length === 0) return null;
+  if (records.length === 0) {
+    return (
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-12 text-center border border-slate-100 dark:border-zinc-800/80 mt-12 transition-colors">
+        <p className="text-slate-500 dark:text-zinc-400">Belum ada riwayat permintaan.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100 dark:border-zinc-800/80 mt-12 transition-colors">

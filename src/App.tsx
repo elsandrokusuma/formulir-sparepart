@@ -95,7 +95,7 @@ Dicetak otomatis dari Form Permintaan Sparepart.`;
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-black font-sans selection:bg-indigo-500/30 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-black font-sans selection:bg-indigo-500/30 text-slate-800 dark:text-slate-200 transition-colors duration-300 w-full overflow-x-hidden">
       {/* Toast Notification */}
       <div className={`fixed top-20 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-xl shadow-lg shadow-green-500/30 flex items-center gap-3 transition-all duration-300 transform ${showSuccess ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0 pointer-events-none'}`}>
         <CheckCircle2 className="w-6 h-6" />
@@ -110,44 +110,45 @@ Dicetak otomatis dari Form Permintaan Sparepart.`;
           <div className="flex items-center justify-between h-16">
 
             {/* Left: Logo & Title */}
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-tr from-indigo-600 to-purple-500 rounded-xl p-2 shadow-lg shadow-indigo-500/20">
-                <Package className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="bg-gradient-to-tr from-indigo-600 to-purple-500 rounded-xl p-1.5 sm:p-2 shadow-lg shadow-indigo-500/20">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <span className="text-slate-800 dark:text-slate-100 font-bold text-lg tracking-wide hidden sm:block">Formulir Sparepart</span>
+              <span className="text-slate-800 dark:text-slate-100 font-bold text-base sm:text-lg tracking-wide hidden md:block">Formulir Sparepart</span>
             </div>
 
             {/* Middle: Navigation Links */}
-            <div className="flex items-center gap-1 sm:gap-6 bg-slate-100 dark:bg-zinc-900 px-2 sm:px-4 py-1.5 rounded-2xl border border-slate-200 dark:border-zinc-800 transition-colors">
+            <div className="flex items-center gap-0.5 sm:gap-4 bg-slate-100/50 dark:bg-zinc-900/50 sm:bg-slate-100 sm:dark:bg-zinc-900 px-1 sm:px-4 py-1 rounded-2xl border border-slate-200/50 dark:border-zinc-800/50 sm:border-slate-200 sm:dark:border-zinc-800 transition-colors">
               <button
                 onClick={() => setActiveTab('form')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'form'
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[13px] sm:text-sm font-medium transition-all ${activeTab === 'form'
                     ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-700/50'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800/50'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50'
                   }`}
               >
-                <FileText className="w-4 h-4 hidden sm:block" />
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Formulir</span>
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'history'
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[13px] sm:text-sm font-medium transition-all ${activeTab === 'history'
                     ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-700/50'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800/50'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50'
                   }`}
               >
-                <Clock className="w-4 h-4 hidden sm:block" />
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Riwayat</span>
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'settings'
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[13px] sm:text-sm font-medium transition-all ${activeTab === 'settings'
                     ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-700/50'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800/50'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50'
                   }`}
               >
-                <Settings className="w-4 h-4 hidden sm:block" />
-                <span>Pengaturan</span>
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Pengaturan</span>
+                <span className="sm:hidden">Admin</span>
               </button>
             </div>
 
@@ -166,13 +167,9 @@ Dicetak otomatis dari Form Permintaan Sparepart.`;
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'form' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in relative z-10">
-            <div className="lg:col-span-8 order-2 lg:order-1 space-y-8">
-              <RequestForm onSuccess={handleSuccess} theme={theme} />
-            </div>
-            <div className="lg:col-span-4 order-1 lg:order-2 space-y-6 lg:sticky lg:top-24">
-              <RecentHistory records={records.slice(0, 5)} />
-            </div>
+          <div className="max-w-4xl mx-auto space-y-8 animate-fade-in relative z-10">
+            <RequestForm onSuccess={handleSuccess} theme={theme} />
+            <RecentHistory records={records.slice(0, 5)} />
           </div>
         ) : activeTab === 'history' ? (
           <div className="animate-fade-in">

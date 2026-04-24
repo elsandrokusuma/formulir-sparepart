@@ -102,14 +102,14 @@ export default function RequestForm({ onSuccess, theme }: Props) {
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100 dark:border-zinc-800/80 transition-colors">
-      <div className="p-8 border-b border-slate-100 dark:border-zinc-800/80 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Formulir Permintaan Sparepart</h2>
-        <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400 leading-relaxed">
+      <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-zinc-800/80 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900">
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-800 dark:text-white">Formulir Permintaan Sparepart</h2>
+        <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 leading-relaxed">
           Silakan isi formulir permintaan sparepart dengan lengkap agar proses pengecekan stok dan pengadaan dapat dilakukan dengan cepat.
         </p>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
         {error && (
           <div className="p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100 flex items-start">
             <CheckCircle className="w-5 h-5 mr-3 shrink-0 text-red-500 hidden" />
@@ -129,7 +129,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
               <input
                 type="text"
                 placeholder="Cari atau ketik manual sparepart..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500 font-medium text-slate-800 dark:text-zinc-100"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500 font-medium text-slate-800 dark:text-zinc-100"
                 value={searchSparepart}
                 onChange={(e) => {
                   setSearchSparepart(e.target.value);
@@ -168,7 +168,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
               type="number"
               min="1"
               placeholder="0"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-medium text-slate-800 dark:text-zinc-100"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-medium text-slate-800 dark:text-zinc-100"
               value={qty}
               onChange={(e) => setQty(e.target.value.replace(/\D/g, ''))}
             />
@@ -182,7 +182,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
               <input
                 type="text"
                 placeholder="Nama peminta"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-medium text-slate-800 dark:text-zinc-100"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-medium text-slate-800 dark:text-zinc-100"
                 value={requester}
                 onChange={(e) => setRequester(e.target.value)}
               />
@@ -193,7 +193,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
               </label>
               <div className="relative">
                  <select
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-medium appearance-none text-slate-800 dark:text-zinc-100"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-medium appearance-none text-slate-800 dark:text-zinc-100"
                   value={division}
                   onChange={(e) => setDivision(e.target.value)}
                 >
@@ -230,17 +230,17 @@ export default function RequestForm({ onSuccess, theme }: Props) {
         </div>
       </div>
 
-      <div className="p-6 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl transition-colors">
+      <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl transition-colors">
         <button
           onClick={handleReset}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700"
         >
           <X className="w-5 h-5" />
           Cancel
         </button>
         <button
           onClick={handleSend}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           <Send className="w-5 h-5" />
           Send Request

@@ -12,7 +12,7 @@ function App() {
   const [records, setRecords] = useState<RequestRecord[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'form' | 'history' | 'settings'>('form');
-  const [notifications, setNotifications] = useState<number>(0);
+  const [notifications, setNotifications] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme');
@@ -23,11 +23,8 @@ function App() {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    if (theme === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -41,26 +38,28 @@ function App() {
       });
       setRecords(requestsData);
     }, (error) => {
-      console.error('Firestore listener error:', error);
+      console.warn('Firestore listener error:', error);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // This is async and returns Promise<void> — matching what RequestForm expects
-  const handleSuccess = async (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>): Promise<void> => {
-    const record = {
+  // Called synchronously from RequestForm — no await so UI never blocks
+  const handleSuccess = (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>): void => {
+    const record: RequestRecord = {
       ...newRequest,
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
       timestamp: new Date().toISOString(),
-      status: 'pending',
-    } as RequestRecord;
+    };
 
-    // Save to Firestore — this will throw if it fails, which is caught in RequestForm
-    const docRef = await addDoc(collection(db, 'requests'), record);
-    console.log('Saved to Firestore with ID:', docRef.id);
+    // 1. Update local state immediately so history shows right away
+    setRecords(prev => [record, ...prev]);
 
-    // Generate and download TXT receipt
+    // 2. Show success toast + bell notification immediately
+    setShowSuccess(true);
+    setNotifications(prev => prev + 1);
+    setTimeout(() => setShowSuccess(false), 4000);
+
+    // 3. Download TXT receipt
     const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
     const fileContent = [
       '====================================',
@@ -92,19 +91,22 @@ function App() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    // Show toast + increment bell
-    setNotifications(prev => prev + 1);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 4000);
+    // 4. Save to Firestore in background — not awaited, never blocks UI
+    addDoc(collection(db, 'requests'), record)
+      .then(docRef => console.log('Saved to Firestore:', docRef.id))
+      .catch(err => console.error('Firestore save error (non-blocking):', err));
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-black font-sans selection:bg-indigo-500/30 text-slate-800 dark:text-slate-200 transition-colors duration-300 w-full overflow-x-hidden">
 
-      {/* Toast */}
+      {/* Success Toast */}
       <div className={`fixed top-20 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-xl shadow-lg shadow-green-500/30 flex items-center gap-3 transition-all duration-300 transform ${showSuccess ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0 pointer-events-none'}`}>
         <CheckCircle2 className="w-6 h-6 shrink-0" />
-        <div className="font-medium">Berhasil! Data permintaan telah disimpan.</div>
+        <div>
+          <div className="font-semibold">Berhasil dikirim!</div>
+          <div className="text-sm text-green-100">Data permintaan telah disimpan.</div>
+        </div>
       </div>
 
       {/* Navbar */}
@@ -124,15 +126,15 @@ function App() {
 
             {/* Tabs */}
             <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-zinc-900 px-1 py-1 rounded-2xl border border-slate-200 dark:border-zinc-800">
-              {[
+              {([
                 { id: 'form', label: 'Formulir', icon: FileText },
                 { id: 'history', label: 'Riwayat', icon: Clock },
                 { id: 'settings', label: 'Admin', icon: Settings },
-              ].map(({ id, label, icon: Icon }) => (
+              ] as const).map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setActiveTab(id as typeof activeTab)}
+                  onClick={() => setActiveTab(id)}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                     activeTab === id
                       ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-700/50'
@@ -145,16 +147,16 @@ function App() {
               ))}
             </div>
 
-            {/* Bell */}
+            {/* Bell Notification */}
             <button
               type="button"
-              className="relative p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+              className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
               onClick={() => setNotifications(0)}
-              title="Notifikasi"
+              title={`${notifications} notifikasi`}
             >
               <Bell className="w-5 h-5" />
               {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce border-2 border-white dark:border-black">
                   {notifications}
                 </span>
               )}
@@ -163,7 +165,7 @@ function App() {
         </div>
       </nav>
 
-      {/* Main */}
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'form' ? (
           <div className="max-w-3xl mx-auto space-y-8">

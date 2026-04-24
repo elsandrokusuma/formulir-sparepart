@@ -10,8 +10,7 @@ const DIVISIONS = [
 ];
 
 interface Props {
-  // onSuccess MUST return Promise<void> so we can await it
-  onSuccess: (record: Omit<RequestRecord, 'id' | 'timestamp'>) => Promise<void>;
+  onSuccess: (record: Omit<RequestRecord, 'id' | 'timestamp'>) => void;
   theme: 'light' | 'dark';
 }
 
@@ -23,7 +22,6 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   const [searchSparepart, setSearchSparepart] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [dbSpareparts, setDbSpareparts] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSignatureEmpty, setIsSignatureEmpty] = useState(true);
   const [error, setError] = useState('');
 
@@ -40,6 +38,8 @@ export default function RequestForm({ onSuccess, theme }: Props) {
         if (data.name) parts.push(data.name);
       });
       setDbSpareparts(parts);
+    }, (err) => {
+      console.warn('Could not load spareparts from Firestore:', err);
     });
     return () => unsubscribe();
   }, []);
@@ -70,53 +70,68 @@ export default function RequestForm({ onSuccess, theme }: Props) {
     setError('');
   };
 
-  // Computed form validity
-  const isFormValid = Boolean(sparepart && qty && Number(qty) > 0 && requester.trim() && division && !isSignatureEmpty);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid || isSubmitting) return;
-
-    const signatureStr = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || '';
+  // =====================
+  // CORE SUBMIT FUNCTION
+  // =====================
+  const doSubmit = () => {
     setError('');
-    setIsSubmitting(true);
 
-    try {
-      await onSuccess({
-        sparepart,
-        quantity: Number(qty),
-        requester,
-        division,
-        signature: signatureStr,
-      });
-      handleReset();
-    } catch (err: any) {
-      console.error('Submit error:', err);
-      setError('Gagal mengirim data. Silakan coba lagi.');
-    } finally {
-      setIsSubmitting(false);
+    if (!sparepart) {
+      setError('Pilih atau isi nama sparepart.');
+      return;
     }
+    if (!qty || Number(qty) <= 0) {
+      setError('Isi quantity yang valid.');
+      return;
+    }
+    if (!requester.trim()) {
+      setError('Isi nama peminta.');
+      return;
+    }
+    if (!division) {
+      setError('Pilih divisi.');
+      return;
+    }
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+      setError('Tanda tangan wajib diisi.');
+      return;
+    }
+
+    const signatureStr = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+
+    // Call parent handler — synchronous, no await
+    onSuccess({
+      sparepart,
+      quantity: Number(qty),
+      requester,
+      division,
+      signature: signatureStr,
+    });
+
+    handleReset();
   };
 
+  const isFormValid = Boolean(
+    sparepart && qty && Number(qty) > 0 && requester.trim() && division && !isSignatureEmpty
+  );
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100 dark:border-zinc-800/80 transition-colors"
-    >
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-visible border border-slate-100 dark:border-zinc-800/80 transition-colors">
+
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-zinc-800/80 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900">
+      <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-zinc-800/80 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-t-2xl">
         <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-800 dark:text-white">
           Formulir Permintaan Sparepart
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 leading-relaxed">
-          Silakan isi formulir permintaan sparepart dengan lengkap agar proses pengecekan stok dan pengadaan dapat dilakukan dengan cepat.
+          Silakan isi formulir permintaan sparepart dengan lengkap.
         </p>
       </div>
 
       {/* Body */}
       <div className="p-4 sm:p-6 space-y-5">
 
-        {/* Error message */}
+        {/* Error */}
         {error && (
           <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-800/50 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -146,13 +161,14 @@ export default function RequestForm({ onSuccess, theme }: Props) {
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 w-4 h-4 pointer-events-none" />
           </div>
           {showDropdown && filteredParts.length > 0 && (
-            <div className="absolute z-20 w-full mt-1 bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 shadow-xl rounded-xl max-h-56 overflow-y-auto">
+            <div className="absolute z-30 w-full mt-1 bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 shadow-xl rounded-xl max-h-56 overflow-y-auto">
               {filteredParts.map(part => (
                 <button
                   key={part}
                   type="button"
                   className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-zinc-700 transition-colors text-sm text-slate-700 dark:text-zinc-200 border-b border-slate-50 dark:border-zinc-700/50 last:border-0"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // prevent closing dropdown before selection
                     setSparepart(part);
                     setSearchSparepart(part);
                     setShowDropdown(false);
@@ -219,12 +235,15 @@ export default function RequestForm({ onSuccess, theme }: Props) {
           <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300">
             Tanda Tangan digital <span className="text-red-500">*</span>
           </label>
-          <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-xl bg-slate-50 dark:bg-zinc-950 relative overflow-hidden group hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors">
+          <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-xl bg-slate-50 dark:bg-zinc-950 relative group hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors">
             <SignatureCanvas
               ref={sigCanvas}
               penColor={theme === 'dark' ? '#f4f4f5' : '#1e293b'}
-              canvasProps={{ className: 'w-full h-40 cursor-crosshair' }}
-              onEnd={() => setIsSignatureEmpty(sigCanvas.current?.isEmpty() ?? true)}
+              canvasProps={{ className: 'w-full h-40 cursor-crosshair block' }}
+              onEnd={() => {
+                const empty = sigCanvas.current?.isEmpty() ?? true;
+                setIsSignatureEmpty(empty);
+              }}
             />
             <button
               type="button"
@@ -237,49 +256,38 @@ export default function RequestForm({ onSuccess, theme }: Props) {
               Clear
             </button>
           </div>
-          {isSignatureEmpty && (sparepart || qty || requester || division) && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Tanda tangan wajib diisi sebelum mengirim
+          {isSignatureEmpty && (
+            <p className="text-xs text-slate-400 dark:text-zinc-500">
+              Tanda tangani di area di atas
             </p>
           )}
         </div>
       </div>
 
-      {/* Footer Buttons */}
-      <div className="px-4 sm:px-6 py-4 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3">
+      {/* Footer */}
+      <div className="px-4 sm:px-6 py-4 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl">
         <button
           type="button"
           onClick={handleReset}
-          disabled={isSubmitting}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all"
         >
           <X className="w-4 h-4" />
           Cancel
         </button>
 
         <button
-          type="submit"
-          disabled={!isFormValid || isSubmitting}
+          type="button"
+          onClick={doSubmit}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-            isFormValid && !isSubmitting
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+            isFormValid
+              ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-600/25 cursor-pointer'
               : 'bg-slate-200 dark:bg-zinc-700 text-slate-400 dark:text-zinc-500 cursor-not-allowed'
           }`}
         >
-          {isSubmitting ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Menyimpan...</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4" />
-              <span>Send Request</span>
-            </>
-          )}
+          <Send className="w-4 h-4" />
+          <span>Send Request</span>
         </button>
       </div>
-    </form>
+    </div>
   );
 }

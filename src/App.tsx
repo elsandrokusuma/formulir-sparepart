@@ -48,19 +48,32 @@ function App() {
 
   const handleSuccess = async (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>) => {
     console.log('App: handleSuccess started', newRequest);
+    
+    const record = {
+      ...newRequest,
+      id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      status: 'pending' 
+    } as RequestRecord;
+
+    // UPDATE LOCAL STATE IMMEDIATELY (Optimistic Update)
+    // Ini agar user langsung melihat data di history meskipun Firestore lambat
+    setRecords(prev => [record, ...prev]);
+
     try {
-      const record = {
-        ...newRequest,
-        id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        status: 'pending' 
-      };
-
       console.log('App: Attempting Firestore save:', record);
+      
+      // Save to Firestore (non-blocking for UI feedback)
+      addDoc(collection(db, 'requests'), record)
+        .then((docRef) => {
+          console.log('App: Document saved successfully with ID:', docRef.id);
+        })
+        .catch((error) => {
+          console.error('App: Firestore save failed:', error);
+        });
 
-      // Save to Firestore and wait for it
-      const docRef = await addDoc(collection(db, 'requests'), record);
-      console.log('App: Document saved successfully with ID:', docRef.id);
+      // Buat file Teks (TXT) untuk di-download
+      const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
 
       // Buat file Teks (TXT) untuk di-download
       const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
@@ -97,8 +110,8 @@ Dicetak otomatis dari Form Permintaan Sparepart.`;
         setShowSuccess(false);
       }, 4000);
     } catch (error: any) {
-      console.error('Error saving to Firestore:', error);
-      alert(`Gagal menyimpan data: ${error.message}. Pastikan koneksi internet stabil dan rules Firestore mengizinkan penulisan.`);
+      console.error('App: Error in handleSuccess:', error);
+      alert(`Terjadi masalah: ${error.message}`);
     }
   };
 

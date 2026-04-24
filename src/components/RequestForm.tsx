@@ -71,6 +71,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   const handleSend = async () => {
     if (!isFormValid) return;
     
+    alert('Memproses permintaan Anda...');
     console.log('handleSend started');
     const signatureStr = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || '';
     
@@ -91,6 +92,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
       setIsSignatureEmpty(true);
     } catch (err: any) {
       console.error('Error in handleSend:', err);
+      alert('Terjadi kesalahan saat mengirim data. Silakan coba lagi.');
       setError('Terjadi kesalahan saat mengirim data. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);

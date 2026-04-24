@@ -66,6 +66,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   };
 
   const handleSend = async () => {
+    alert('Tombol diklik! Memulai proses...');
     console.log('handleSend started');
     if (!sparepart) {
       setError('Mohon pilih atau isi nama sparepart.');
@@ -242,12 +243,12 @@ export default function RequestForm({ onSuccess, theme }: Props) {
         </div>
       </div>
 
-      <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl transition-colors">
+      <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl transition-colors relative z-50">
         <button
           type="button"
           onClick={handleReset}
           disabled={isSubmitting}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700 disabled:opacity-50"
+          className="relative z-50 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700 disabled:opacity-50"
         >
           <X className="w-5 h-5" />
           Cancel
@@ -256,7 +257,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
           type="button"
           onClick={handleSend}
           disabled={isSubmitting}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="relative z-50 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>

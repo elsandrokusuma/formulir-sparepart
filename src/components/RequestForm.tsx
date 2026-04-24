@@ -18,88 +18,87 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   const [division, setDivision] = useState('');
   const [dbSpareparts, setDbSpareparts] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [validationMsg, setValidationMsg] = useState('');
+  const [msg, setMsg] = useState('');
+  const [signed, setSigned] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'spareparts'), orderBy('name'));
     const unsub = onSnapshot(q, snap => {
-      setDbSpareparts(snap.docs.map(d => d.data().name as string).filter(Boolean));
+      setDbSpareparts(snap.docs.map(d => (d.data().name as string)).filter(Boolean));
     }, () => {});
     return unsub;
   }, []);
 
-  const handleClick = () => {
-    // Validate one by one — show EXACTLY what is missing
-    if (!sparepart) { setValidationMsg('❌ Sparepart belum dipilih/diisi.'); return; }
-    if (!qty || Number(qty) <= 0) { setValidationMsg('❌ Quantity belum diisi / tidak valid.'); return; }
-    if (!requester.trim()) { setValidationMsg('❌ Nama peminta belum diisi.'); return; }
-    if (!division) { setValidationMsg('❌ Divisi belum dipilih.'); return; }
-    if (!sigRef.current || sigRef.current.isEmpty()) {
-      setValidationMsg('❌ Tanda tangan belum diisi. Silakan gambar tanda tangan di kotak atas.');
-      return;
-    }
+  const submit = () => {
+    console.log('[FORM] Submit clicked!', { sparepart, qty, requester, division, signed });
 
-    setValidationMsg('');
+    if (!sparepart.trim()) { setMsg('⚠️ Isi nama sparepart terlebih dahulu.'); return; }
+    if (!qty || Number(qty) < 1) { setMsg('⚠️ Isi quantity yang valid.'); return; }
+    if (!requester.trim()) { setMsg('⚠️ Isi nama peminta.'); return; }
+    if (!division) { setMsg('⚠️ Pilih divisi.'); return; }
+    if (!signed) { setMsg('⚠️ Gambar tanda tangan terlebih dahulu.'); return; }
 
-    const sig = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
+    const sig = sigRef.current?.getTrimmedCanvas().toDataURL('image/png') ?? '';
+    
+    console.log('[FORM] All valid, calling onSuccess');
+    setMsg('');
 
-    // Call parent — parent handles Firestore + toast
-    onSuccess({ sparepart, quantity: Number(qty), requester, division, signature: sig });
+    onSuccess({
+      sparepart: sparepart.trim(),
+      quantity: Number(qty),
+      requester: requester.trim(),
+      division,
+      signature: sig,
+    });
 
-    // Reset form
+    // reset
     setSparepart('');
     setQty('');
     setRequester('');
     setDivision('');
-    setFilter('');
-    sigRef.current.clear();
+    setSigned(false);
+    sigRef.current?.clear();
   };
 
-  const filtered = dbSpareparts.filter(p => p.toLowerCase().includes(filter.toLowerCase()));
+  const allFilled = sparepart.trim() && qty && Number(qty) > 0 && requester.trim() && division && signed;
 
   return (
-    <div style={{ fontFamily: 'sans-serif' }} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-xl overflow-visible">
-
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-xl">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-slate-100 dark:border-zinc-800 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-t-2xl">
+      <div className="px-6 py-5 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-t-2xl border-b border-slate-100 dark:border-zinc-800">
         <h2 className="text-xl font-bold text-slate-800 dark:text-white">Formulir Permintaan Sparepart</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">Isi semua field dan tanda tangan, lalu klik Send Request.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">Isi semua field dan tanda tangan, lalu tekan Send Request.</p>
       </div>
 
-      <div className="px-6 py-5 space-y-5">
+      <div className="px-6 py-5 space-y-4">
+
+        {/* Error / validation message */}
+        {msg && (
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-xl px-4 py-3 text-sm font-medium">
+            {msg}
+          </div>
+        )}
 
         {/* Sparepart */}
         <div className="relative">
-          <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
-            Sparepart <span className="text-red-500">*</span>
-          </label>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Sparepart *</label>
           <input
             type="text"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Cari atau ketik nama sparepart..."
-            value={filter || sparepart}
+            placeholder="Ketik atau pilih sparepart..."
+            className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            value={sparepart}
+            onChange={e => { setSparepart(e.target.value); setShowDropdown(true); }}
             onFocus={() => setShowDropdown(true)}
-            onChange={e => {
-              setFilter(e.target.value);
-              setSparepart(e.target.value);
-              setShowDropdown(true);
-            }}
-            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
           />
-          {showDropdown && filtered.length > 0 && (
-            <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-600 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-              {filtered.map(p => (
+          {showDropdown && dbSpareparts.filter(p => p.toLowerCase().includes(sparepart.toLowerCase())).length > 0 && (
+            <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+              {dbSpareparts.filter(p => p.toLowerCase().includes(sparepart.toLowerCase())).map(p => (
                 <button
-                  key={p}
-                  type="button"
+                  key={p} type="button"
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200"
-                  onMouseDown={() => {
-                    setSparepart(p);
-                    setFilter(p);
-                    setShowDropdown(false);
-                  }}
+                  onMouseDown={() => { setSparepart(p); setShowDropdown(false); }}
                 >{p}</button>
               ))}
             </div>
@@ -108,14 +107,10 @@ export default function RequestForm({ onSuccess, theme }: Props) {
 
         {/* Qty */}
         <div>
-          <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
-            Quantity <span className="text-red-500">*</span>
-          </label>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Quantity *</label>
           <input
-            type="number"
-            min="1"
-            placeholder="0"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            type="number" min="1" placeholder="0"
+            className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
             value={qty}
             onChange={e => setQty(e.target.value)}
           />
@@ -124,23 +119,18 @@ export default function RequestForm({ onSuccess, theme }: Props) {
         {/* Name + Division */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
-              Nama Peminta <span className="text-red-500">*</span>
-            </label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Nama Peminta *</label>
             <input
-              type="text"
-              placeholder="Nama lengkap"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              type="text" placeholder="Nama lengkap"
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
               value={requester}
               onChange={e => setRequester(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
-              Divisi <span className="text-red-500">*</span>
-            </label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Divisi *</label>
             <select
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
               value={division}
               onChange={e => setDivision(e.target.value)}
             >
@@ -152,50 +142,47 @@ export default function RequestForm({ onSuccess, theme }: Props) {
 
         {/* Signature */}
         <div>
-          <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
-            Tanda Tangan Digital <span className="text-red-500">*</span>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+            Tanda Tangan Digital *{' '}
+            {signed && <span className="text-green-500 font-normal text-xs">✓ Sudah ditandatangani</span>}
           </label>
-          <div className="relative border-2 border-dashed border-slate-300 dark:border-zinc-600 rounded-xl bg-slate-50 dark:bg-zinc-950 overflow-hidden">
+          <div className="relative border-2 border-dashed rounded-xl overflow-hidden"
+            style={{ borderColor: signed ? '#22c55e' : '#cbd5e1' }}>
             <SignatureCanvas
               ref={sigRef}
               penColor={theme === 'dark' ? '#fff' : '#111'}
-              canvasProps={{ className: 'w-full h-40 cursor-crosshair' }}
+              canvasProps={{ className: 'w-full h-36 cursor-crosshair block' }}
+              onBegin={() => setSigned(false)}
+              onEnd={() => setSigned(true)}
             />
-            <button
-              type="button"
+            <button type="button"
               className="absolute top-2 right-2 text-xs bg-white dark:bg-zinc-700 border border-slate-200 dark:border-zinc-600 px-2 py-1 rounded text-slate-500 dark:text-zinc-300"
-              onClick={() => sigRef.current?.clear()}
+              onClick={() => { sigRef.current?.clear(); setSigned(false); }}
             >Clear</button>
           </div>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Gambar tanda tangan Anda di kotak abu-abu di atas</p>
         </div>
-
-        {/* Validation Message — very visible */}
-        {validationMsg && (
-          <div className="bg-red-50 dark:bg-red-900/40 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-xl px-4 py-3 text-sm font-medium">
-            {validationMsg}
-          </div>
-        )}
-
       </div>
 
-      {/* Buttons */}
+      {/* Footer */}
       <div className="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 rounded-b-2xl flex justify-end gap-3">
         <button
           type="button"
           onClick={() => {
             setSparepart(''); setQty(''); setRequester(''); setDivision('');
-            setFilter(''); setValidationMsg('');
+            setSigned(false); setMsg('');
             sigRef.current?.clear();
           }}
-          className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors"
-        >
-          ✕ Cancel
-        </button>
+          className="px-5 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors"
+        >✕ Cancel</button>
+
         <button
           type="button"
-          onClick={handleClick}
-          className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/30 transition-colors"
+          onClick={submit}
+          className={`px-6 py-2.5 text-sm font-bold rounded-xl text-white shadow-lg transition-all ${
+            allFilled
+              ? 'bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-blue-500/30 cursor-pointer'
+              : 'bg-blue-400/60 cursor-pointer'
+          }`}
         >
           ➤ Send Request
         </button>

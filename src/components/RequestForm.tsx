@@ -68,10 +68,10 @@ export default function RequestForm({ onSuccess, theme }: Props) {
 
   const isFormValid = sparepart && qty && requester.trim() && division && !isSignatureEmpty;
 
-  const handleSend = async () => {
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!isFormValid) return;
     
-    alert('Memproses permintaan Anda...');
     console.log('handleSend started');
     const signatureStr = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || '';
     
@@ -100,7 +100,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100 dark:border-zinc-800/80 transition-colors">
+    <form onSubmit={handleSend} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100 dark:border-zinc-800/80 transition-colors">
       <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-zinc-800/80 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900">
         <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-800 dark:text-white">Formulir Permintaan Sparepart</h2>
         <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 leading-relaxed">
@@ -244,8 +244,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
           Cancel
         </button>
         <button
-          type="button"
-          onClick={handleSend}
+          type="submit"
           disabled={isSubmitting || !isFormValid}
           className={`relative z-50 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white transition-all focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed ${
             isFormValid 
@@ -266,6 +265,6 @@ export default function RequestForm({ onSuccess, theme }: Props) {
           )}
         </button>
       </div>
-    </div>
+    </form>
   );
 }

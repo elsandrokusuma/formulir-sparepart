@@ -12,6 +12,7 @@ function App() {
   const [records, setRecords] = useState<RequestRecord[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'form' | 'history' | 'settings'>('form');
+  const [notifications, setNotifications] = useState<number>(0);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme');
@@ -103,6 +104,7 @@ Dicetak otomatis dari Form Permintaan Sparepart.`;
       URL.revokeObjectURL(url);
 
       setShowSuccess(true);
+      setNotifications(prev => prev + 1);
       setTimeout(() => {
         setShowSuccess(false);
       }, 4000);
@@ -172,9 +174,13 @@ Dicetak otomatis dari Form Permintaan Sparepart.`;
 
             {/* Right: Notifications */}
             <div className="flex items-center gap-2 sm:gap-4">
-              <div className="relative">
-                <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-800 dark:hover:text-slate-200 transition-colors" />
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-50 dark:border-black"></div>
+              <div className="relative cursor-pointer group" onClick={() => setNotifications(0)}>
+                <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors" />
+                {notifications > 0 && (
+                  <div className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-slate-50 dark:border-black flex items-center justify-center animate-bounce">
+                    {notifications}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -1,13 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import { Send, X, Search, ChevronDown, AlertCircle } from 'lucide-react';
 import type { RequestRecord } from '../types';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
-const DIVISIONS = [
-  'Teknisi', 'Gudang', 'Customer Service', 'Manajemen', 'Lainnya'
-];
+const DIVISIONS = ['Teknisi', 'Gudang', 'Customer Service', 'Manajemen', 'Lainnya'];
 
 interface Props {
   onSuccess: (record: Omit<RequestRecord, 'id' | 'timestamp'>) => void;
@@ -19,273 +16,188 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   const [qty, setQty] = useState('');
   const [requester, setRequester] = useState('');
   const [division, setDivision] = useState('');
-  const [searchSparepart, setSearchSparepart] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
   const [dbSpareparts, setDbSpareparts] = useState<string[]>([]);
-  const [isSignatureEmpty, setIsSignatureEmpty] = useState(true);
-  const [error, setError] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [validationMsg, setValidationMsg] = useState('');
+  const sigRef = useRef<SignatureCanvas>(null);
 
-  const sigCanvas = useRef<SignatureCanvas>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Load spareparts from Firestore
   useEffect(() => {
     const q = query(collection(db, 'spareparts'), orderBy('name'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const parts: string[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.name) parts.push(data.name);
-      });
-      setDbSpareparts(parts);
-    }, (err) => {
-      console.warn('Could not load spareparts from Firestore:', err);
-    });
-    return () => unsubscribe();
+    const unsub = onSnapshot(q, snap => {
+      setDbSpareparts(snap.docs.map(d => d.data().name as string).filter(Boolean));
+    }, () => {});
+    return unsub;
   }, []);
 
-  const filteredParts = dbSpareparts.filter(p =>
-    p.toLowerCase().includes(searchSparepart.toLowerCase())
-  );
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
+  const handleClick = () => {
+    // Validate one by one — show EXACTLY what is missing
+    if (!sparepart) { setValidationMsg('❌ Sparepart belum dipilih/diisi.'); return; }
+    if (!qty || Number(qty) <= 0) { setValidationMsg('❌ Quantity belum diisi / tidak valid.'); return; }
+    if (!requester.trim()) { setValidationMsg('❌ Nama peminta belum diisi.'); return; }
+    if (!division) { setValidationMsg('❌ Divisi belum dipilih.'); return; }
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      setValidationMsg('❌ Tanda tangan belum diisi. Silakan gambar tanda tangan di kotak atas.');
+      return;
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const handleReset = () => {
+    setValidationMsg('');
+
+    const sig = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
+
+    // Call parent — parent handles Firestore + toast
+    onSuccess({ sparepart, quantity: Number(qty), requester, division, signature: sig });
+
+    // Reset form
     setSparepart('');
-    setSearchSparepart('');
     setQty('');
     setRequester('');
     setDivision('');
-    sigCanvas.current?.clear();
-    setIsSignatureEmpty(true);
-    setError('');
+    setFilter('');
+    sigRef.current.clear();
   };
 
-  // =====================
-  // CORE SUBMIT FUNCTION
-  // =====================
-  const doSubmit = () => {
-    setError('');
-
-    if (!sparepart) {
-      setError('Pilih atau isi nama sparepart.');
-      return;
-    }
-    if (!qty || Number(qty) <= 0) {
-      setError('Isi quantity yang valid.');
-      return;
-    }
-    if (!requester.trim()) {
-      setError('Isi nama peminta.');
-      return;
-    }
-    if (!division) {
-      setError('Pilih divisi.');
-      return;
-    }
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      setError('Tanda tangan wajib diisi.');
-      return;
-    }
-
-    const signatureStr = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
-
-    // Call parent handler — synchronous, no await
-    onSuccess({
-      sparepart,
-      quantity: Number(qty),
-      requester,
-      division,
-      signature: signatureStr,
-    });
-
-    handleReset();
-  };
-
-  const isFormValid = Boolean(
-    sparepart && qty && Number(qty) > 0 && requester.trim() && division && !isSignatureEmpty
-  );
+  const filtered = dbSpareparts.filter(p => p.toLowerCase().includes(filter.toLowerCase()));
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-blue-900/5 overflow-visible border border-slate-100 dark:border-zinc-800/80 transition-colors">
+    <div style={{ fontFamily: 'sans-serif' }} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-xl overflow-visible">
 
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-zinc-800/80 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-t-2xl">
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-800 dark:text-white">
-          Formulir Permintaan Sparepart
-        </h2>
-        <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 leading-relaxed">
-          Silakan isi formulir permintaan sparepart dengan lengkap.
-        </p>
+      <div className="px-6 py-5 border-b border-slate-100 dark:border-zinc-800 bg-gradient-to-r from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-t-2xl">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Formulir Permintaan Sparepart</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">Isi semua field dan tanda tangan, lalu klik Send Request.</p>
       </div>
 
-      {/* Body */}
-      <div className="p-4 sm:p-6 space-y-5">
-
-        {/* Error */}
-        {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-800/50 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
-          </div>
-        )}
+      <div className="px-6 py-5 space-y-5">
 
         {/* Sparepart */}
-        <div className="space-y-1 relative" ref={containerRef}>
-          <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300">
-            Sparepart apa yang diminta? <span className="text-red-500">*</span>
+        <div className="relative">
+          <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
+            Sparepart <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Cari atau ketik manual sparepart..."
-              className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
-              value={searchSparepart}
-              onChange={(e) => {
-                setSearchSparepart(e.target.value);
-                setSparepart(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-            />
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 w-4 h-4 pointer-events-none" />
-          </div>
-          {showDropdown && filteredParts.length > 0 && (
-            <div className="absolute z-30 w-full mt-1 bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 shadow-xl rounded-xl max-h-56 overflow-y-auto">
-              {filteredParts.map(part => (
+          <input
+            type="text"
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Cari atau ketik nama sparepart..."
+            value={filter || sparepart}
+            onFocus={() => setShowDropdown(true)}
+            onChange={e => {
+              setFilter(e.target.value);
+              setSparepart(e.target.value);
+              setShowDropdown(true);
+            }}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+          />
+          {showDropdown && filtered.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-600 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+              {filtered.map(p => (
                 <button
-                  key={part}
+                  key={p}
                   type="button"
-                  className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-zinc-700 transition-colors text-sm text-slate-700 dark:text-zinc-200 border-b border-slate-50 dark:border-zinc-700/50 last:border-0"
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // prevent closing dropdown before selection
-                    setSparepart(part);
-                    setSearchSparepart(part);
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200"
+                  onMouseDown={() => {
+                    setSparepart(p);
+                    setFilter(p);
                     setShowDropdown(false);
                   }}
-                >
-                  {part}
-                </button>
+                >{p}</button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Quantity */}
-        <div className="space-y-1">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300">
-            Berapa quantity? <span className="text-red-500">*</span>
+        {/* Qty */}
+        <div>
+          <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
+            Quantity <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
             min="1"
             placeholder="0"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 dark:text-zinc-100"
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
             value={qty}
-            onChange={(e) => setQty(e.target.value)}
+            onChange={e => setQty(e.target.value)}
           />
         </div>
 
-        {/* Requester + Division */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300">
-              Siapa yang meminta? <span className="text-red-500">*</span>
+        {/* Name + Division */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
+              Nama Peminta <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Nama peminta"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 dark:text-zinc-100"
+              placeholder="Nama lengkap"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
               value={requester}
-              onChange={(e) => setRequester(e.target.value)}
+              onChange={e => setRequester(e.target.value)}
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300">
-              Divisi apa? <span className="text-red-500">*</span>
+          <div>
+            <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
+              Divisi <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm appearance-none text-slate-800 dark:text-zinc-100"
-                value={division}
-                onChange={(e) => setDivision(e.target.value)}
-              >
-                <option value="" disabled className="dark:bg-zinc-800">Pilih divisi...</option>
-                {DIVISIONS.map(div => (
-                  <option key={div} value={div} className="dark:bg-zinc-800">{div}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 w-4 h-4 pointer-events-none" />
-            </div>
+            <select
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              value={division}
+              onChange={e => setDivision(e.target.value)}
+            >
+              <option value="">Pilih divisi...</option>
+              {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
           </div>
         </div>
 
         {/* Signature */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300">
-            Tanda Tangan digital <span className="text-red-500">*</span>
+        <div>
+          <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-zinc-300">
+            Tanda Tangan Digital <span className="text-red-500">*</span>
           </label>
-          <div className="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-xl bg-slate-50 dark:bg-zinc-950 relative group hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors">
+          <div className="relative border-2 border-dashed border-slate-300 dark:border-zinc-600 rounded-xl bg-slate-50 dark:bg-zinc-950 overflow-hidden">
             <SignatureCanvas
-              ref={sigCanvas}
-              penColor={theme === 'dark' ? '#f4f4f5' : '#1e293b'}
-              canvasProps={{ className: 'w-full h-40 cursor-crosshair block' }}
-              onEnd={() => {
-                const empty = sigCanvas.current?.isEmpty() ?? true;
-                setIsSignatureEmpty(empty);
-              }}
+              ref={sigRef}
+              penColor={theme === 'dark' ? '#fff' : '#111'}
+              canvasProps={{ className: 'w-full h-40 cursor-crosshair' }}
             />
             <button
               type="button"
-              onClick={() => {
-                sigCanvas.current?.clear();
-                setIsSignatureEmpty(true);
-              }}
-              className="absolute top-2 right-2 text-xs bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 px-2 py-1 rounded text-slate-500 dark:text-zinc-400 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              Clear
-            </button>
+              className="absolute top-2 right-2 text-xs bg-white dark:bg-zinc-700 border border-slate-200 dark:border-zinc-600 px-2 py-1 rounded text-slate-500 dark:text-zinc-300"
+              onClick={() => sigRef.current?.clear()}
+            >Clear</button>
           </div>
-          {isSignatureEmpty && (
-            <p className="text-xs text-slate-400 dark:text-zinc-500">
-              Tanda tangani di area di atas
-            </p>
-          )}
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Gambar tanda tangan Anda di kotak abu-abu di atas</p>
         </div>
+
+        {/* Validation Message — very visible */}
+        {validationMsg && (
+          <div className="bg-red-50 dark:bg-red-900/40 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-xl px-4 py-3 text-sm font-medium">
+            {validationMsg}
+          </div>
+        )}
+
       </div>
 
-      {/* Footer */}
-      <div className="px-4 sm:px-6 py-4 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl">
+      {/* Buttons */}
+      <div className="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 rounded-b-2xl flex justify-end gap-3">
         <button
           type="button"
-          onClick={handleReset}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all"
+          onClick={() => {
+            setSparepart(''); setQty(''); setRequester(''); setDivision('');
+            setFilter(''); setValidationMsg('');
+            sigRef.current?.clear();
+          }}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors"
         >
-          <X className="w-4 h-4" />
-          Cancel
+          ✕ Cancel
         </button>
-
         <button
           type="button"
-          onClick={doSubmit}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-            isFormValid
-              ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-600/25 cursor-pointer'
-              : 'bg-slate-200 dark:bg-zinc-700 text-slate-400 dark:text-zinc-500 cursor-not-allowed'
-          }`}
+          onClick={handleClick}
+          className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/30 transition-colors"
         >
-          <Send className="w-4 h-4" />
-          <span>Send Request</span>
+          ➤ Send Request
         </button>
       </div>
     </div>

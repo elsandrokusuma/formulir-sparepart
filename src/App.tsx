@@ -4,178 +4,153 @@ import RecentHistory from './components/RecentHistory';
 import FullHistory from './components/FullHistory';
 import AdminPanel from './components/AdminPanel';
 import type { RequestRecord } from './types';
-import { Package, Bell, Settings, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { Package, Bell, Settings, FileText, Clock, CheckCircle2 } from 'lucide-react';
 import { collection, onSnapshot, addDoc, query, orderBy } from 'firebase/firestore';
 import { db } from './lib/firebase';
 
 function App() {
   const [records, setRecords] = useState<RequestRecord[]>([]);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'form' | 'history' | 'settings'>('form');
-  const [notifications, setNotifications] = useState(0);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme');
-      return (savedTheme as 'light' | 'dark') || 'dark';
-    }
-    return 'dark';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
+  );
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    else root.classList.remove('dark');
+    document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Real-time listener from Firestore
+  // Live Firestore listener
   useEffect(() => {
     const q = query(collection(db, 'requests'), orderBy('timestamp', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const requestsData: RequestRecord[] = [];
-      querySnapshot.forEach((doc) => {
-        requestsData.push({ id: doc.id, ...doc.data() } as RequestRecord);
-      });
-      setRecords(requestsData);
-    }, (error) => {
-      console.warn('Firestore listener error:', error);
-    });
-    return () => unsubscribe();
+    return onSnapshot(q, snap => {
+      setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() } as RequestRecord)));
+    }, err => console.warn('Firestore listener error:', err));
   }, []);
 
-  // Called synchronously from RequestForm — no await so UI never blocks
-  const handleSuccess = (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>): void => {
+  const handleSuccess = (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>) => {
     const record: RequestRecord = {
       ...newRequest,
-      id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
+      id: Date.now().toString(),
       timestamp: new Date().toISOString(),
     };
 
-    // 1. Update local state immediately so history shows right away
+    // ✅ 1. Update local list instantly
     setRecords(prev => [record, ...prev]);
 
-    // 2. Show success toast + bell notification immediately
-    setShowSuccess(true);
-    setNotifications(prev => prev + 1);
-    setTimeout(() => setShowSuccess(false), 4000);
+    // ✅ 2. Show success toast + bell badge
+    setShowToast(true);
+    setNotifCount(n => n + 1);
+    setTimeout(() => setShowToast(false), 4000);
 
-    // 3. Download TXT receipt
-    const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
-    const fileContent = [
+    // ✅ 3. Download TXT receipt
+    const lines = [
       '====================================',
       'BUKTI PERMINTAAN SPAREPART',
       '====================================',
-      `Tanggal/Jam : ${dateStr}`,
-      `ID Request  : ${record.id}`,
+      `Tanggal : ${new Date(record.timestamp).toLocaleString('id-ID')}`,
+      `ID      : ${record.id}`,
       '',
-      'Rincian Permintaan:',
-      `- Sparepart  : ${record.sparepart}`,
-      `- Quantity   : ${record.quantity}`,
-      '',
-      'Data Peminta:',
-      `- Nama       : ${record.requester}`,
-      `- Divisi     : ${record.division}`,
+      `Sparepart : ${record.sparepart}`,
+      `Quantity  : ${record.quantity}`,
+      `Peminta   : ${record.requester}`,
+      `Divisi    : ${record.division}`,
       '',
       '(Tanda tangan digital tersimpan di sistem)',
       '====================================',
-      'Dicetak otomatis dari Form Permintaan Sparepart.',
     ].join('\n');
-
-    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const blob = new Blob([lines], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Permintaan_${record.sparepart.replace(/\s+/g, '_')}_${Date.now()}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Permintaan_${record.sparepart.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     URL.revokeObjectURL(url);
 
-    // 4. Save to Firestore in background — not awaited, never blocks UI
+    // ✅ 4. Save to Firestore in background (non-blocking)
     addDoc(collection(db, 'requests'), record)
-      .then(docRef => console.log('Saved to Firestore:', docRef.id))
-      .catch(err => console.error('Firestore save error (non-blocking):', err));
+      .then(ref => console.log('✅ Firestore saved:', ref.id))
+      .catch(err => console.warn('⚠️ Firestore error (data saved locally):', err));
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-black font-sans selection:bg-indigo-500/30 text-slate-800 dark:text-slate-200 transition-colors duration-300 w-full overflow-x-hidden">
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-50 dark:bg-black text-slate-800 dark:text-slate-200 transition-colors">
 
-      {/* Success Toast */}
-      <div className={`fixed top-20 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-xl shadow-lg shadow-green-500/30 flex items-center gap-3 transition-all duration-300 transform ${showSuccess ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0 pointer-events-none'}`}>
-        <CheckCircle2 className="w-6 h-6 shrink-0" />
+      {/* Toast Notification */}
+      <div className={`fixed top-20 right-4 z-[9999] flex items-center gap-3 bg-green-500 text-white px-5 py-3.5 rounded-xl shadow-xl transition-all duration-300 ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+        <CheckCircle2 className="w-5 h-5 shrink-0" />
         <div>
-          <div className="font-semibold">Berhasil dikirim!</div>
-          <div className="text-sm text-green-100">Data permintaan telah disimpan.</div>
+          <div className="font-bold text-sm">Berhasil dikirim!</div>
+          <div className="text-xs text-green-100">Data tersimpan di history.</div>
         </div>
       </div>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/70 dark:bg-zinc-900/70 border-b border-slate-200 dark:border-zinc-800/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      <nav className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
-            {/* Logo */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="bg-gradient-to-tr from-indigo-600 to-purple-500 rounded-xl p-1.5 sm:p-2 shadow-lg shadow-indigo-500/20">
-                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <span className="text-slate-800 dark:text-slate-100 font-bold text-base sm:text-lg tracking-wide hidden md:block">
-                Formulir Sparepart
-              </span>
+          {/* Logo */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-500 p-2 rounded-xl shadow-md">
+              <Package className="w-4 h-4 text-white" />
             </div>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-zinc-900 px-1 py-1 rounded-2xl border border-slate-200 dark:border-zinc-800">
-              {([
-                { id: 'form', label: 'Formulir', icon: FileText },
-                { id: 'history', label: 'Riwayat', icon: Clock },
-                { id: 'settings', label: 'Admin', icon: Settings },
-              ] as const).map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                    activeTab === id
-                      ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-700/50'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-zinc-800/50'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Bell Notification */}
-            <button
-              type="button"
-              className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-              onClick={() => setNotifications(0)}
-              title={`${notifications} notifikasi`}
-            >
-              <Bell className="w-5 h-5" />
-              {notifications > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce border-2 border-white dark:border-black">
-                  {notifications}
-                </span>
-              )}
-            </button>
+            <span className="font-bold text-base hidden sm:block text-slate-800 dark:text-white">Formulir Sparepart</span>
           </div>
+
+          {/* Tabs */}
+          <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl gap-0.5">
+            {([
+              { id: 'form', label: 'Formulir', icon: FileText },
+              { id: 'history', label: 'Riwayat', icon: Clock },
+              { id: 'settings', label: 'Admin', icon: Settings },
+            ] as const).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                  activeTab === id
+                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Bell */}
+          <button
+            type="button"
+            onClick={() => setNotifCount(0)}
+            className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-500 dark:text-slate-400"
+          >
+            <Bell className="w-5 h-5" />
+            {notifCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-black animate-bounce">
+                {notifCount}
+              </span>
+            )}
+          </button>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'form' ? (
-          <div className="max-w-3xl mx-auto space-y-8">
+      {/* Content */}
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        {activeTab === 'form' && (
+          <div className="max-w-2xl mx-auto space-y-8">
             <RequestForm onSuccess={handleSuccess} theme={theme} />
             <RecentHistory records={records.slice(0, 5)} />
           </div>
-        ) : activeTab === 'history' ? (
-          <FullHistory records={records} />
-        ) : (
-          <div className="max-w-4xl mx-auto space-y-6">
+        )}
+        {activeTab === 'history' && <FullHistory records={records} />}
+        {activeTab === 'settings' && (
+          <div className="max-w-2xl mx-auto">
             <AdminPanel theme={theme} setTheme={setTheme} />
           </div>
         )}

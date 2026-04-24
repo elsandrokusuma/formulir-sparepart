@@ -46,21 +46,24 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleSuccess = (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>) => {
-    const record: RequestRecord = {
-      ...newRequest,
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString()
-    };
+  const handleSuccess = async (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>) => {
+    try {
+      const record = {
+        ...newRequest,
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        status: 'pending' // Menambahkan field status baru sesuai permintaan
+      };
 
-    // Save to Firestore
-    addDoc(collection(db, 'requests'), record).catch(error => {
-      console.error('Error adding document: ', error);
-    });
+      console.log('Attempting to save record to Firestore:', record);
 
-    // Buat file Teks (TXT) untuk di-download
-    const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
-    const fileContent = `====================================
+      // Save to Firestore and wait for it
+      const docRef = await addDoc(collection(db, 'requests'), record);
+      console.log('Document successfully written with ID:', docRef.id);
+
+      // Buat file Teks (TXT) untuk di-download
+      const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
+      const fileContent = `====================================
 BUKTI PERMINTAAN SPAREPART
 ====================================
 Tanggal/Jam : ${dateStr}
@@ -78,20 +81,24 @@ Data Peminta:
 ====================================
 Dicetak otomatis dari Form Permintaan Sparepart.`;
 
-    const blob = new Blob([fileContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Permintaan_${record.sparepart.replace(/\s+/g, '_')}_${new Date().getTime()}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const blob = new Blob([fileContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Permintaan_${record.sparepart.replace(/\s+/g, '_')}_${new Date().getTime()}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 4000);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 4000);
+    } catch (error: any) {
+      console.error('Error saving to Firestore:', error);
+      alert(`Gagal menyimpan data: ${error.message}. Pastikan koneksi internet stabil dan rules Firestore mengizinkan penulisan.`);
+    }
   };
 
   return (

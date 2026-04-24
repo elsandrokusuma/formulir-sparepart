@@ -22,6 +22,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
   const [searchSparepart, setSearchSparepart] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [dbSpareparts, setDbSpareparts] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [error, setError] = useState('');
   const sigCanvas = useRef<SignatureCanvas>(null);
@@ -64,7 +65,7 @@ export default function RequestForm({ onSuccess, theme }: Props) {
     setError('');
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!sparepart) {
       setError('Mohon pilih atau isi nama sparepart.');
       return;
@@ -89,15 +90,22 @@ export default function RequestForm({ onSuccess, theme }: Props) {
     const signatureStr = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || '';
     
     setError('');
-    onSuccess({
-      sparepart,
-      quantity: Number(qty),
-      requester,
-      division,
-      signature: signatureStr
-    });
+    setIsSubmitting(true);
     
-    handleReset();
+    try {
+      await onSuccess({
+        sparepart,
+        quantity: Number(qty),
+        requester,
+        division,
+        signature: signatureStr
+      });
+      handleReset();
+    } catch (err: any) {
+      setError('Terjadi kesalahan saat mengirim data. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -233,17 +241,28 @@ export default function RequestForm({ onSuccess, theme }: Props) {
       <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-end gap-3 rounded-b-2xl transition-colors">
         <button
           onClick={handleReset}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400 transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-zinc-700 disabled:opacity-50"
         >
           <X className="w-5 h-5" />
           Cancel
         </button>
         <button
           onClick={handleSend}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          <Send className="w-5 h-5" />
-          Send Request
+          {isSubmitting ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span>Sending...</span>
+            </>
+          ) : (
+            <>
+              <Send className="w-5 h-5" />
+              <span>Send Request</span>
+            </>
+          )}
         </button>
       </div>
     </div>

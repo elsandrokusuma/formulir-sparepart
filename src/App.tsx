@@ -74,9 +74,6 @@ function App() {
 
       // Buat file Teks (TXT) untuk di-download
       const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
-
-      // Buat file Teks (TXT) untuk di-download
-      const dateStr = new Date(record.timestamp).toLocaleString('id-ID');
       const fileContent = `====================================
 BUKTI PERMINTAAN SPAREPART
 ====================================

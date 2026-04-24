@@ -47,19 +47,20 @@ function App() {
   }, []);
 
   const handleSuccess = async (newRequest: Omit<RequestRecord, 'id' | 'timestamp'>) => {
+    console.log('App: handleSuccess started', newRequest);
     try {
       const record = {
         ...newRequest,
-        id: crypto.randomUUID(),
+        id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
         timestamp: new Date().toISOString(),
-        status: 'pending' // Menambahkan field status baru sesuai permintaan
+        status: 'pending' 
       };
 
-      console.log('Attempting to save record to Firestore:', record);
+      console.log('App: Attempting Firestore save:', record);
 
       // Save to Firestore and wait for it
       const docRef = await addDoc(collection(db, 'requests'), record);
-      console.log('Document successfully written with ID:', docRef.id);
+      console.log('App: Document saved successfully with ID:', docRef.id);
 
       // Buat file Teks (TXT) untuk di-download
       const dateStr = new Date(record.timestamp).toLocaleString('id-ID');

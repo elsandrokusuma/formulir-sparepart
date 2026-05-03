@@ -19,14 +19,15 @@ export default function FullHistory({ records }: Props) {
   };
 
   const confirmDelete = async (id: string) => {
+    // Tutup modal secara langsung agar terasa instan (Optimistic UI)
+    setDeleteConfirmId(null);
+    setSelectedId(null);
+
     try {
       await deleteDoc(doc(db, 'requests', id));
     } catch (err) {
       console.error('Gagal menghapus', err);
-      alert('Gagal menghapus riwayat');
-    } finally {
-      setDeleteConfirmId(null);
-      setSelectedId(null);
+      alert('Gagal menghapus riwayat. Periksa koneksi internet Anda.');
     }
   };
 

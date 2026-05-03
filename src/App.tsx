@@ -26,7 +26,7 @@ function App() {
   useEffect(() => {
     const q = query(collection(db, 'requests'), orderBy('timestamp', 'desc'));
     return onSnapshot(q, snap => {
-      setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() } as RequestRecord)));
+      setRecords(snap.docs.map(d => ({ ...d.data(), id: d.id } as RequestRecord)));
     }, err => console.warn('Firestore listener error:', err));
   }, []);
 
@@ -72,7 +72,8 @@ function App() {
     URL.revokeObjectURL(url);
 
     // ✅ 4. Save to Firestore in background (non-blocking)
-    addDoc(collection(db, 'requests'), record)
+    const { id, ...dataToSave } = record;
+    addDoc(collection(db, 'requests'), dataToSave)
       .then(ref => console.log('✅ Firestore saved:', ref.id))
       .catch(err => console.warn('⚠️ Firestore error (data saved locally):', err));
   };

@@ -144,7 +144,7 @@ function App() {
       <main className="max-w-5xl mx-auto px-4 py-8">
         {activeTab === 'form' && (
           <div className="max-w-2xl mx-auto space-y-8">
-            <RequestForm onSuccess={handleSuccess} theme={theme} />
+            <RequestForm onSuccess={handleSuccess} />
             <RecentHistory records={records.slice(0, 5)} />
           </div>
         )}

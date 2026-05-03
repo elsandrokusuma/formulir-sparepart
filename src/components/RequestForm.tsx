@@ -8,12 +8,11 @@ const DIVISIONS = ['Teknisi', 'Gudang', 'Customer Service', 'Manajemen', 'Lainny
 
 interface Props {
   onSuccess: (record: Omit<RequestRecord, 'id' | 'timestamp'>) => void;
-  theme: 'light' | 'dark';
 }
 
 const BLANK_SIG_LENGTH = 2000; // empty canvas PNG is ~1-2KB
 
-export default function RequestForm({ onSuccess, theme }: Props) {
+export default function RequestForm({ onSuccess }: Props) {
   const [sparepart, setSparepart] = useState('');
   const [qty, setQty] = useState('');
   const [requester, setRequester] = useState('');

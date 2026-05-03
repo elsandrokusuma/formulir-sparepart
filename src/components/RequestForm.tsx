@@ -143,18 +143,18 @@ export default function RequestForm({ onSuccess, theme }: Props) {
         {/* Signature */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Tanda Tangan Digital *</label>
-          <div className="relative border-2 border-dashed border-slate-300 dark:border-zinc-600 rounded-xl overflow-hidden bg-slate-50 dark:bg-zinc-950">
+          <div className="relative border-2 border-dashed border-slate-300 dark:border-zinc-600 rounded-xl overflow-hidden bg-white">
             <SignatureCanvas
               ref={sigRef}
-              penColor={theme === 'dark' ? '#ffffff' : '#111111'}
+              penColor="#111111"
               canvasProps={{ className: 'w-full h-36 cursor-crosshair block' }}
             />
             <button type="button"
-              className="absolute top-2 right-2 text-xs bg-white dark:bg-zinc-700 border border-slate-200 dark:border-zinc-600 px-2 py-1 rounded text-slate-500 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-600"
+              className="absolute top-2 right-2 text-xs bg-slate-100 border border-slate-200 px-2 py-1 rounded text-slate-600 hover:bg-slate-200 shadow-sm"
               onClick={() => sigRef.current?.clear()}
             >Clear</button>
           </div>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Gambar tanda tangan Anda di kotak abu-abu di atas, lalu klik Send Request.</p>
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Gambar tanda tangan Anda di kotak putih di atas, lalu klik Send Request.</p>
         </div>
       </div>
 

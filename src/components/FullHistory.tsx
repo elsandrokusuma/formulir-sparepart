@@ -48,8 +48,8 @@ export default function FullHistory({ records }: Props) {
                 <td className="p-4 text-slate-600 dark:text-zinc-300">{record.requester}</td>
                 <td className="p-4 text-slate-600 dark:text-zinc-300">{record.division}</td>
                 <td className="p-4">
-                  <div className="h-12 w-24 bg-white dark:bg-zinc-200 border border-slate-200 dark:border-zinc-700 rounded p-1 flex items-center justify-center pointer-events-none overflow-hidden">
-                    <img src={record.signature} alt="Tanda Tangan" className="max-h-full max-w-full object-contain filter dark:brightness-90" />
+                  <div className="h-12 w-24 bg-white border border-slate-200 dark:border-zinc-700 rounded p-1 flex items-center justify-center pointer-events-none overflow-hidden relative">
+                    <img src={record.signature} alt="Tanda Tangan" style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }} className="max-h-full max-w-full object-contain" />
                   </div>
                 </td>
               </tr>

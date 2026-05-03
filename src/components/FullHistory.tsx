@@ -11,18 +11,22 @@ interface Props {
 export default function FullHistory({ records }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailRecord, setDetailRecord] = useState<RequestRecord | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Yakin ingin menghapus riwayat ini?')) {
-      try {
-        await deleteDoc(doc(db, 'requests', id));
-      } catch (err) {
-        console.error('Gagal menghapus', err);
-        alert('Gagal menghapus riwayat');
-      } finally {
-        setSelectedId(null);
-      }
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'requests', id));
+    } catch (err) {
+      console.error('Gagal menghapus', err);
+      alert('Gagal menghapus riwayat');
+    } finally {
+      setDeleteConfirmId(null);
+      setSelectedId(null);
     }
   };
 
@@ -110,7 +114,7 @@ export default function FullHistory({ records }: Props) {
       {detailRecord && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-all" onClick={() => setDetailRecord(null)}>
           <div 
-            className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-zinc-800 transform transition-all"
+            className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-zinc-800 transform transition-all animate-in zoom-in-95 duration-200"
             onClick={e => e.stopPropagation()}
           >
             <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50 dark:bg-zinc-800/50">
@@ -196,6 +200,38 @@ export default function FullHistory({ records }: Props) {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-all animate-in fade-in duration-200" onClick={() => setDeleteConfirmId(null)}>
+          <div 
+            className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 text-center animate-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-5">
+              <Trash2 className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Hapus Riwayat?</h3>
+            <p className="text-sm text-slate-500 dark:text-zinc-400 mb-8 leading-relaxed">
+              Data permintaan ini akan dihapus secara permanen dan tidak dapat dikembalikan.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => confirmDelete(deleteConfirmId)}
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 active:scale-95"
+              >
+                Ya, Hapus
+              </button>
             </div>
           </div>
         </div>

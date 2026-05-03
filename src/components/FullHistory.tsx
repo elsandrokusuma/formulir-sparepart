@@ -83,24 +83,22 @@ export default function FullHistory({ records }: Props) {
                   </td>
                   <td className="p-4 text-slate-600 dark:text-zinc-300">{record.requester}</td>
                   <td className="p-4 text-slate-600 dark:text-zinc-300">{record.division}</td>
-                  <td className="p-4 flex justify-end pr-6">
-                    <div className="h-12 w-24 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded p-1 flex items-center justify-center pointer-events-none overflow-hidden relative">
-                      <img src={record.signature} alt="Tanda Tangan" className="max-h-full max-w-full object-contain brightness-0 dark:invert" />
+                  <td className="p-4 pr-6">
+                    <div className="flex items-center justify-end">
+                      <div className="h-12 w-24 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded p-1 flex items-center justify-center pointer-events-none overflow-hidden shrink-0 transition-all duration-300">
+                        <img src={record.signature} alt="Tanda Tangan" className="max-h-full max-w-full object-contain brightness-0 dark:invert" />
+                      </div>
+                      <div className={`overflow-hidden transition-all duration-300 ease-in-out flex items-center justify-end ${selectedId === record.id ? 'w-11 ml-3 opacity-100' : 'w-0 ml-0 opacity-0'}`}>
+                        <button
+                          onClick={(e) => handleDelete(record.id, e)}
+                          className="p-2.5 bg-red-500 text-white rounded-xl shadow-md hover:bg-red-600 hover:scale-105 transition-all shrink-0"
+                          title="Hapus riwayat"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                   </td>
-                  
-                  {/* Floating Trash Button when selected */}
-                  {selectedId === record.id && (
-                    <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-6 w-32 bg-gradient-to-l from-blue-50 via-blue-50/80 dark:from-zinc-800 dark:via-zinc-800/80 to-transparent">
-                      <button
-                        onClick={(e) => handleDelete(record.id, e)}
-                        className="p-2.5 bg-red-500 text-white rounded-xl shadow-lg hover:bg-red-600 hover:scale-105 transition-all transform animate-in zoom-in"
-                        title="Hapus riwayat"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
                 </tr>
               ))}
             </tbody>
